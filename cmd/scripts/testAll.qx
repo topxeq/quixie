@@ -1,0 +1,8 @@
+systemCmd $rs "quixie" "-gopath" "basic.qx"
+
+test $rs "abc qqq\n10\n" $seq "basic.qx"
+
+systemCmd $rs "quixie" "-gopath" "goto.qx"
+
+test $rs "start...\nlabel1 = 1.8\nc = 1.8\n" $seq "goto.qx"
+
