@@ -6,3 +6,15 @@ systemCmd $rs "quixie" "-gopath" "goto.qx"
 
 test $rs "start...\nlabel1 = 1.8\nc = 1.8\n" $seq "goto.qx"
 
+systemCmd $rs "quixie" "-gopath" "fastCall.qx"
+
+test $rs "124\n" $seq "fastCall.qx"
+
+systemCmd $rs "quixie" "-gopath" "local.qx"
+
+test $rs "1.6 2.8 undefined undefined\n2.5 10 abc true\n2.5 2.8 undefined true\n" $seq "local.qx"
+
+systemCmd $rs "quixie" "-gopath" "sealCall.qx"
+
+test $rs "arg1= 1.6\narg2= 2.3\n3.9\nsealFunc result: 3.9\n" $seq "sealCall.qx"
+

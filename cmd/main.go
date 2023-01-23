@@ -308,11 +308,11 @@ func runInteractiveShell() int {
 
 	vmT := vm0T.(*quixie.QuixieVM)
 
-	vmT.SetVar("argsG", os.Args)
+	vmT.SetVar(vmT.Running, "argsG", os.Args)
 
 	var guiHandlerG tk.TXDelegate = guiHandler
 
-	vmT.SetVar("guiG", guiHandlerG)
+	vmT.SetVar(vmT.Running, "guiG", guiHandlerG)
 
 	for {
 		if following {
@@ -341,9 +341,9 @@ func runInteractiveShell() int {
 
 		retG := ""
 
-		originalCodeLenT := vmT.GetCodeLen()
+		originalCodeLenT := vmT.GetCodeLen(vmT.Running)
 
-		lrs := vmT.Load(source)
+		lrs := vmT.Load(vmT.Running, source)
 
 		if tk.IsErrX(lrs) {
 			following = false
@@ -564,15 +564,15 @@ func doXms(res http.ResponseWriter, req *http.Request) {
 
 	vmT := quixie.NewVMQuick()
 
-	vmT.SetVar("paraMapG", paraMapT)
-	vmT.SetVar("requestG", req)
-	vmT.SetVar("responseG", res)
-	vmT.SetVar("reqNameG", reqT)
-	vmT.SetVar("basePathG", basePathG)
+	vmT.SetVar(vmT.Running, "paraMapG", paraMapT)
+	vmT.SetVar(vmT.Running, "requestG", req)
+	vmT.SetVar(vmT.Running, "responseG", res)
+	vmT.SetVar(vmT.Running, "reqNameG", reqT)
+	vmT.SetVar(vmT.Running, "basePathG", basePathG)
 
 	// vmT.SetVar("inputG", objA)
 
-	lrs := vmT.Load(fcT)
+	lrs := vmT.Load(vmT.Running, fcT)
 
 	contentTypeT := res.Header().Get("Content-Type")
 
@@ -696,15 +696,15 @@ func doXmsContent(res http.ResponseWriter, req *http.Request) {
 
 	vmT := quixie.NewVMQuick(nil)
 
-	vmT.SetVar("paraMapG", paraMapT)
-	vmT.SetVar("requestG", req)
-	vmT.SetVar("responseG", res)
-	vmT.SetVar("reqNameG", reqT)
-	vmT.SetVar("basePathG", basePathG)
+	vmT.SetVar(vmT.Running, "paraMapG", paraMapT)
+	vmT.SetVar(vmT.Running, "requestG", req)
+	vmT.SetVar(vmT.Running, "responseG", res)
+	vmT.SetVar(vmT.Running, "reqNameG", reqT)
+	vmT.SetVar(vmT.Running, "basePathG", basePathG)
 
 	// vmT.SetVar("inputG", objA)
 
-	lrs := vmT.Load(fcT)
+	lrs := vmT.Load(vmT.Running, fcT)
 
 	contentTypeT := res.Header().Get("Content-Type")
 

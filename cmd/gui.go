@@ -79,10 +79,10 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 
 	p := objA.(*quixie.QuixieVM)
 
-	titleT := p.GetSwitchVarValue(paraArgsT, "-title=", "dialog")
-	widthT := p.GetSwitchVarValue(paraArgsT, "-width=", "800")
-	heightT := p.GetSwitchVarValue(paraArgsT, "-height=", "600")
-	iconT := p.GetSwitchVarValue(paraArgsT, "-icon=", "2")
+	titleT := p.GetSwitchVarValue(p.Running, paraArgsT, "-title=", "dialog")
+	widthT := p.GetSwitchVarValue(p.Running, paraArgsT, "-width=", "800")
+	heightT := p.GetSwitchVarValue(p.Running, paraArgsT, "-height=", "600")
+	iconT := p.GetSwitchVarValue(p.Running, paraArgsT, "-icon=", "2")
 	debugT := tk.IfSwitchExistsWhole(paraArgsT, "-debug")
 	centerT := tk.IfSwitchExistsWhole(paraArgsT, "-center")
 	fixT := tk.IfSwitchExistsWhole(paraArgsT, "-fix")
@@ -203,9 +203,9 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 
 				vmT := quixie.NewVMQuick()
 
-				vmT.SetVar("inputG", argsA)
+				vmT.SetVar(p.Running, "inputG", argsA)
 
-				lrs := vmT.Load(codeT)
+				lrs := vmT.Load(vmT.Running, codeT)
 
 				if tk.IsErrX(lrs) {
 					return lrs
@@ -242,7 +242,7 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 				// quixie.GlobalsG.Vars["verbose"]. = p.VerboseM
 				// vmT.VerbosePlusM = p.VerbosePlusM
 
-				vmT.SetVar("inputG", args)
+				vmT.SetVar(vmT.Running, "inputG", args)
 
 				// argCountT := p.Pop()
 
@@ -254,7 +254,7 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 				// 	vmT.Push(p.Pop())
 				// }
 
-				lrs := vmT.Load(codeT)
+				lrs := vmT.Load(vmT.Running, codeT)
 
 				if tk.IsErrX(lrs) {
 					return lrs
@@ -424,9 +424,9 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 
 		pT := objA.(*quixie.QuixieVM)
 
-		formatT := pT.GetSwitchVarValue(paraArgsT, "-format=", "")
+		formatT := pT.GetSwitchVarValue(pT.Running, paraArgsT, "-format=", "")
 
-		idxStrT := pT.GetSwitchVarValue(paraArgsT, "-index=", "0")
+		idxStrT := pT.GetSwitchVarValue(pT.Running, paraArgsT, "-index=", "0")
 
 		idxT := tk.StrToInt(idxStrT, 0)
 
