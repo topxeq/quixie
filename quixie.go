@@ -36,7 +36,11 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"help": 105, // not implemented
 
-	"onError": 106,
+	"onError": 106, // set error handler
+
+	"dumpf": 107,
+
+	"defer": 109, //delay running an instruction, the instruction will be running by order(first in last out) when the function returned or the program exit
 
 	"test":             121, // for test purpose, check if 2 values are equal
 	"testByStartsWith": 122, // for test purpose, check if first string starts with the 2nd
@@ -128,6 +132,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"?":          990, // 三元操作符，用法示例：? $result $a $s1 "abc"，表示判断变量$a中的布尔值，如果为true，则结果为$s1，否则结果值为字符串abc，结果值将放入结果变量result中，如果省略结果参数，结果值将会存入$tmp
 	"ifThenElse": 990,
+
+	"quickEval": 999, // quick eval an expression, use {} to contain an instruction(no nested {} allowed) that return result value in $tmp
 
 	// func related
 
@@ -279,24 +285,24 @@ func ParseLine(commandA string) ([]string, string, error) {
 	state := 1
 	current := ""
 	quote := "`"
-	// escapeNext := false
+	escapeNext := false
 
 	command := []rune(commandA)
 
 	for i := 0; i < len(command); i++ {
 		c := command[i]
 
-		// if escapeNext {
-		// 	current += string(c)
-		// 	escapeNext = false
-		// 	continue
-		// }
+		if escapeNext {
+			current += string(c)
+			escapeNext = false
+			continue
+		}
 
-		// if c == '\\' {
-		// 	current += string(c)
-		// 	escapeNext = true
-		// 	continue
-		// }
+		if c == '\\' && state == 2 && quote == "\"" {
+			current += string(c)
+			escapeNext = true
+			continue
+		}
 
 		if state == 2 {
 			if string(c) != quote {
@@ -918,7 +924,13 @@ func (p *FuncContext) RunDefer(vmA *QuixieVM, rcA *RunningContext) error {
 		nv, ok := instrT.(*Instr)
 
 		if !ok {
-			return fmt.Errorf("invalid instruction: %#v", instrT)
+			nvv, ok := instrT.(Instr)
+
+			if ok {
+				nv = &nvv
+			} else {
+				return fmt.Errorf("invalid instruction: %#v", instrT)
+			}
 		}
 
 		if GlobalsG.VerboseLevel > 1 {
@@ -1880,6 +1892,50 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		return ""
 
+	case 107: // dumpf
+		// if instrT.ParamLen < 1 {
+		tk.Dump(p, r)
+		return ""
+	// }
+
+	// v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[0]))
+
+	// if v1 == "all" {
+	// 	tk.Dump(p, r)
+	// } else if v1 == "vars" {
+	// 	for k, v := range p.FuncContextM.VarsLocalMapM {
+	// 		tk.Dumpf("%v -> %v", p.VarNameMapM[k], (*(p.FuncContextM.VarsM))[v])
+	// 	}
+
+	// } else if v1 == "labels" {
+	// 	for k, v := range p.LabelsM {
+	// 		tk.Dumpf("%v -> %v/%v (%v)", p.VarNameMapM[k], v, p.CodeSourceMapM[v], tk.LimitString(p.SourceM[p.CodeSourceMapM[v]], 50))
+	// 	}
+
+	// } else {
+	// 	tk.Dumpf(v1, p.ParamsToList(instrT, 1)...)
+	// }
+
+	// return ""
+	case 109: // defer
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[0]))
+
+		codeT, ok := InstrNameSet[v1]
+
+		if !ok {
+			return p.Errf(r, "unknown instruction: %v", v1)
+		}
+
+		instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], Params: instrT.Params[1:], ParamLen: instrT.ParamLen - 1, Line: tk.RemoveFirstSubString(strings.TrimSpace(instrT.Line), v1)} //&([]VarRef{})}
+
+		p.GetCurrentFuncContext(r).DeferStack.Push(instrT)
+
+		return ""
+
 	case 121: // test
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters")
@@ -1887,6 +1943,8 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		v1 := p.GetVarValue(r, instrT.Params[0])
 		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		// tk.Plo("--->", v2)
 
 		var v3 string
 		var v4 string
@@ -3320,6 +3378,26 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		p.SetVar(r, pr, v3)
 
 		return ""
+	case 999: // quickEval
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		// tk.Plv(instrT)
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])) //instrT.Line
+
+		p.SetVar(r, pr, QuickEval(v1, p, r))
+
+		return ""
 
 	case 1010: // call
 		if instrT.ParamLen < 2 {
@@ -3836,7 +3914,7 @@ func (p *QuixieVM) Run(posA ...int) interface{} {
 
 					continue
 				}
-
+				// tk.Plo(1.2, p.Running, p.RootFunc)
 				p.RunDeferUpToRoot(p.Running)
 				return p.Errf(p.Running, "[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(resultT))
 				// tk.Pl("[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
