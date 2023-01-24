@@ -50,4 +50,7 @@ systemCmd $rs "qx" "-gopath" "onError.qx"
 
 test $rs "error occurred while running to line 8: runtime error, detail: (Line 8: getArrayItem $item $array1 1) index out of range: 1/0\ncalculation completed(and the error handler)\n" $seq "onError.qx"
 
+systemCmd $rs "qx" "-gopath" "defer.qx"
+
+testByStartsWith $rs "1\nsub1\nsub defer: test1\nmain defer: test2\nmain defer: test1\n(Line 26:     checkErrX $r1) [" $seq "defer.qx"
 

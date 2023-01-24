@@ -40,7 +40,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"dumpf": 107,
 
-	"defer": 109, //delay running an instruction, the instruction will be running by order(first in last out) when the function returned or the program exit
+	"defer": 109, // delay running an instruction, the instruction will be running by order(first in last out) when the function returns or the program exits, or error occurrs
 
 	"test":             121, // for test purpose, check if 2 values are equal
 	"testByStartsWith": 122, // for test purpose, check if first string starts with the 2nd
@@ -4579,7 +4579,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetNegativeResult(v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4589,7 +4589,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetNegativeResult(v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4603,7 +4603,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetAddResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4615,7 +4615,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetMinusResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4627,7 +4627,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetMultiplyResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4639,7 +4639,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetDivResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4651,7 +4651,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetModResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4664,7 +4664,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 
 				// tk.Plvsr(v1, v2, vr)
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4676,7 +4676,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetNEQResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4688,7 +4688,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetGTResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4700,7 +4700,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetLTResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4712,7 +4712,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetGETResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4724,7 +4724,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetLETResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4736,7 +4736,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetANDResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4748,7 +4748,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetORResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4760,7 +4760,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetBitANDResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4772,7 +4772,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetBitORResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4784,7 +4784,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetBitXORResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
@@ -4796,7 +4796,7 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				vr := tk.GetBitANDNOTResult(v2, v1)
 
 				if tk.IsErrX(vr) {
-					return fmt.Errorf("计算表达式失败：%v", vr)
+					return fmt.Errorf("failed to cal the expression: %v", vr)
 				}
 
 				valueStackT.Push(vr)
