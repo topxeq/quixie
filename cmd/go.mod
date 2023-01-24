@@ -1,4 +1,4 @@
-module github.com/topxeq/quixie/quixie
+module github.com/topxeq/quixie/qx
 
 go 1.19
 

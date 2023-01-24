@@ -1,20 +1,40 @@
-systemCmd $rs "quixie" "-gopath" "basic.qx"
+systemCmd $rs "qx" "-gopath" "basic.qx"
 
 test $rs "abc qqq\n10\n" $seq "basic.qx"
 
-systemCmd $rs "quixie" "-gopath" "goto.qx"
+systemCmd $rs "qx" "-gopath" "goto.qx"
 
 test $rs "start...\nlabel1 = 1.8\nc = 1.8\n" $seq "goto.qx"
 
-systemCmd $rs "quixie" "-gopath" "fastCall.qx"
+systemCmd $rs "qx" "-gopath" "if.qx"
+
+test $rs "if branch\nlabel3 else\n" $seq "if.qx"
+
+systemCmd $rs "qx" "-gopath" "fastCall.qx"
 
 test $rs "124\n" $seq "fastCall.qx"
 
-systemCmd $rs "quixie" "-gopath" "local.qx"
+systemCmd $rs "qx" "-gopath" "local.qx"
 
-test $rs "1.6 2.8 undefined undefined\n2.5 10 abc true\n2.5 2.8 undefined true\n" $seq "local.qx"
+test $rs "1.6 2.8 undefined undefined\n2.5 10 abc true\nfunction result: done\n2.5 2.8 undefined true\n" $seq "local.qx"
 
-systemCmd $rs "quixie" "-gopath" "sealCall.qx"
+systemCmd $rs "qx" "-gopath" "fib.qx"
 
-test $rs "arg1= 1.6\narg2= 2.3\n3.9\nsealFunc result: 3.9\n" $seq "sealCall.qx"
+test $rs "2584\n" $seq "fib.qx"
+
+systemCmd $rs "qx" "-gopath" "call.qx"
+
+test $rs "2584\n" $seq "call.qx"
+
+systemCmd $rs "qx" "-gopath" "runCall.qx"
+
+test $rs "arg1= 1.6\narg2= 2.3\n3.9\nrunCall result: 3.9\n" $seq "runCall.qx"
+
+systemCmd $rs "qx" "-gopath" "sealCall.qx"
+
+test $rs "num1= 1.62\nnum2= 2.8\n4.536\nseal-function result: 4.536\n" $seq "sealCall.qx"
+
+systemCmd $rs "qx" "-gopath" "loadModule.qx"
+
+test $rs "code loaded:  \n :add1\r\n    pop $v2L\r\n    pop $v1L\r\n\r\n    add $push $v1L $v2L\r\n\r\n    fastRet\r\n\r\n:sub1\r\n    pop $v2L\r\n    pop $v1L\r\n\r\n    sub $push $v1L $v2L\r\n    \r\n    fastRet \n\n(int)23\n(int)18\n(int)1782\n" $seq "loadModule.qx"
 

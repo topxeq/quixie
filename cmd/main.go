@@ -197,7 +197,7 @@ func Svc() {
 
 					scriptPathG = v["Abs"]
 
-					rs := quixie.RunCode(fcT, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG})
+					rs := quixie.RunCode(fcT, nil, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG})
 					if !tk.IsUndefined(rs) {
 						tk.LogWithTimeCompact("task result: %v", rs)
 					}
@@ -230,7 +230,7 @@ func Svc() {
 
 			scriptPathG = v["Abs"]
 
-			rs := quixie.RunCode(fcT, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG})
+			rs := quixie.RunCode(fcT, nil, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG})
 			if !tk.IsUndefined(rs) {
 				tk.LogWithTimeCompact("auto task result: %v", rs)
 			}
@@ -696,15 +696,15 @@ func doXmsContent(res http.ResponseWriter, req *http.Request) {
 
 	vmT := quixie.NewVMQuick(nil)
 
-	vmT.SetVar(vmT.Running, "paraMapG", paraMapT)
-	vmT.SetVar(vmT.Running, "requestG", req)
-	vmT.SetVar(vmT.Running, "responseG", res)
-	vmT.SetVar(vmT.Running, "reqNameG", reqT)
-	vmT.SetVar(vmT.Running, "basePathG", basePathG)
+	vmT.SetVar(nil, "paraMapG", paraMapT)
+	vmT.SetVar(nil, "requestG", req)
+	vmT.SetVar(nil, "responseG", res)
+	vmT.SetVar(nil, "reqNameG", reqT)
+	vmT.SetVar(nil, "basePathG", basePathG)
 
 	// vmT.SetVar("inputG", objA)
 
-	lrs := vmT.Load(vmT.Running, fcT)
+	lrs := vmT.Load(nil, fcT)
 
 	contentTypeT := res.Header().Get("Content-Type")
 
@@ -1081,7 +1081,7 @@ func main() {
 
 				scriptPathG = v["Abs"]
 
-				rs := quixie.RunCode(fcT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG, "basePathG": basePathG}, argsT...)
+				rs := quixie.RunCode(fcT, nil, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG, "basePathG": basePathG}, argsT...)
 				if !tk.IsUndefined(rs) {
 					tk.Pl("%v", rs)
 				}
@@ -1316,7 +1316,7 @@ func main() {
 
 	var guiHandlerG tk.TXDelegate = guiHandler
 
-	rs := quixie.RunCode(scriptT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, argsT...)
+	rs := quixie.RunCode(scriptT, nil, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, argsT...)
 	if !tk.IsUndefined(rs) {
 		tk.Pl("%v", rs)
 	}

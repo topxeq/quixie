@@ -35,6 +35,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"testByStartsWith": 122, // for test purpose, check if first string starts with the 2nd
 	"testByReg":        123, // for test purpose, check if first string matches the regex pattern defined by the 2nd string
 
+	"loadCode": 151,
+
 	"compile": 153, // compile a piece of code
 
 	"goto": 180, // jump to the instruction line (often indicated by labels)
@@ -63,6 +65,22 @@ var InstrNameSet map[string]int = map[string]int{
 	"assign": 401, // assignment, from local variable to global, assign value to local if not found
 	"=":      401,
 
+	// if/else, switch related
+	"if":    610, // 判断第一个参数（布尔类型，如果省略则表示取弹栈值）如果是true，则跳转到指定标号处
+	"ifNot": 611,
+
+	// compare related
+	"==": 701, // 判断两个数值是否相等，无参数时，比较两个弹栈值，结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
+
+	"!=": 702, // 判断两个数值是否不等，无参数时，比较两个弹栈值，结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
+
+	"<":  703, // 判断两个数值是否是第一个数值小于第二个数值，无参数时，比较两个弹栈值（注意弹栈值先弹出的为第二个待比较数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
+	">":  704, // 判断两个数值是否是第一个数值大于第二个数值，无参数时，比较两个弹栈值（注意弹栈值先弹出的为第二个待比较数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
+	"<=": 705, // 判断两个数值是否是第一个数值小于等于第二个数值，无参数时，比较两个弹栈值（注意弹栈值先弹出的为第二个待比较数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
+	">=": 706, // 判断两个数值是否是第一个数值大于等于第二个数值，无参数时，比较两个弹栈值（注意弹栈值先弹出的为第二个待比较数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
+
+	"cmp": 790, // 比较两个数值，根据结果返回-1，0或1，分别表示小于、等于、大于，无参数时，比较两个弹栈值（注意弹栈值先弹出的为第二个待比较数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
+
 	// operator related
 
 	"inc": 801, // ++
@@ -74,15 +92,51 @@ var InstrNameSet map[string]int = map[string]int{
 	"add": 901, // add 2 values
 	"+":   901,
 
+	"sub": 902, // 两个数值相减，无参数时，将两个弹栈值相加（注意弹栈值先弹出的为第二个数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待计算数值
+	"-":   902,
+
+	"mul": 903, // 两个数值相乘，无参数时，将两个弹栈值相加（注意弹栈值先弹出的为第二个数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待计算数值
+	"*":   903,
+
+	"div": 904, // 两个数值相除，无参数时，将两个弹栈值相加（注意弹栈值先弹出的为第二个数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待计算数值
+	"/":   904,
+
+	"mod": 905, // 两个数值做取模计算，无参数时，将两个弹栈值相加（注意弹栈值先弹出的为第二个数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待计算数值
+	"%":   905,
+
+	"!": 930, // 取反操作符，对于布尔值取反，即true -> false，false -> true。对于其他数值，如果是未定义的变量（即Undefined），返回true，否则返回false
+
+	"not": 931, // 逻辑非操作符，对于布尔值取反，即true -> false，false -> true，对于int、rune、byte等按位取反，即 0 -> 1， 1 -> 0
+
+	"&&": 933, // 逻辑与操作符
+
+	"||": 934, // 逻辑或操作符
+
+	"&": 941, // bit and
+
+	"|": 942, // bit or
+
+	"^":  943, // bit xor
+	"&^": 944, // bit and not
+
+	"?":          990, // 三元操作符，用法示例：? $result $a $s1 "abc"，表示判断变量$a中的布尔值，如果为true，则结果为$s1，否则结果值为字符串abc，结果值将放入结果变量result中，如果省略结果参数，结果值将会存入$tmp
+	"ifThenElse": 990,
+
 	// func related
 
-	"call": 1010, // call a normal function
+	"call": 1010, // call a normal function, usage: call $result :func1 $arg1 $arg2...
+	// result value could not be omitted, use $drop if not neccessary
+	// all arguments/parameters will be put into the local variable "inputL" in the function
+	// and the function should return result in local variable "outL"
+	// use "ret $result" is a covenient way to set value of $outL and return from the function
 
-	"ret": 1020, // return from a normal function
+	"ret": 1020, // return from a normal function, can with a paramter for set $outL
 
-	"sealCall": 1055, //
+	"sealCall": 1050, // new a VM to run a function, output/input through inputG & outG
 
-	"fastCall": 1070, // fast call function, no function stack used
+	"runCall": 1055, //
+
+	"fastCall": 1070, // fast call function, no function stack used, no result value or arguments allowed, use stack or variables for input and output
 
 	"fastRet": 1071, // return from fast function, used with fastCall
 
@@ -94,10 +148,22 @@ var InstrNameSet map[string]int = map[string]int{
 	// print related
 	"pln": 10410, // same as println function in other languages
 
+	"plo": 10411, // print a value with its type
+
+	"pl": 10420,
+
 	"plv": 10430,
+
+	// error related / err string(with the prefix "TXERROR:" ) related
+
+	"checkErrX": 10945, // check if variable is error or err string, and terminate the program if true
 
 	// system related
 	"systemCmd": 20601,
+
+	// file related
+	"loadText": 21101, // load text from file
+
 }
 
 // type UndefinedStruct struct {
@@ -117,7 +183,7 @@ var InstrNameSet map[string]int = map[string]int{
 // }
 
 type VarRef struct {
-	Ref   int // -99 - invalid, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
+	Ref   int // -99 - invalid, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
 	Value interface{}
 }
 
@@ -330,6 +396,14 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 			} else {
 				return VarRef{3, s1T[1:]}
 			}
+		} else if strings.HasPrefix(s1T, ":") { // labels
+			vNameT := s1T[1:]
+
+			if len(vNameT) < 1 {
+				return VarRef{-3, s1T}
+			}
+
+			return VarRef{-16, vNameT}
 		} else if strings.HasPrefix(s1T, "#") { // values
 			if len(s1T) < 2 {
 				return VarRef{-3, s1T}
@@ -508,6 +582,28 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 			}
 
 			return VarRef{-3, s1T}
+		} else if strings.HasPrefix(s1T, "@") { // quickEval
+			if len(s1T) < 2 {
+				return VarRef{-3, s1T}
+			}
+
+			s1T = strings.TrimSpace(s1T[1:])
+
+			if strings.HasPrefix(s1T, "`") && strings.HasSuffix(s1T, "`") {
+				s1T = s1T[1 : len(s1T)-1]
+
+				return VarRef{-10, s1T} // quick eval value
+			} else if strings.HasPrefix(s1T, `"`) && strings.HasSuffix(s1T, `"`) {
+				tmps, errT := strconv.Unquote(s1T)
+
+				if errT != nil {
+					return VarRef{-10, s1T}
+				}
+
+				return VarRef{-10, tmps}
+			}
+
+			return VarRef{-10, s1T}
 		}
 	}
 
@@ -515,6 +611,8 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 }
 
 func Compile(codeA string) interface{} {
+	codeA = strings.ReplaceAll(codeA, "~~~", "`")
+
 	p := NewCompiledCode()
 
 	originCodeLenT := 0
@@ -760,14 +858,17 @@ func (p *RunningContext) GetLabelIndex(inputA interface{}) int {
 
 	s2 := tk.ToStr(inputA)
 
-	if len(s2) > 1 && s2[0:1] == ":" {
-		s2a := s2[1:]
-		if strings.HasPrefix(s2a, "+") {
-			return p.CodePointer + tk.ToInt(s2a[1:])
+	if strings.HasPrefix(s2, ":") {
+		s2 = s2[1:]
+	}
+
+	if len(s2) > 1 {
+		if strings.HasPrefix(s2, "+") {
+			return p.CodePointer + tk.ToInt(s2[1:])
 		} else if strings.HasPrefix(s2, "-") {
-			return p.CodePointer - tk.ToInt(s2a[1:])
+			return p.CodePointer - tk.ToInt(s2[1:])
 		} else {
-			labelPointerT, ok := p.Labels[s2a]
+			labelPointerT, ok := p.Labels[s2]
 
 			if ok {
 				return labelPointerT
@@ -812,7 +913,7 @@ func (p *FuncContext) RunDefer(vmA *QuixieVM, rcA *RunningContext) error {
 
 		rs := RunInstr(vmA, rcA, nv)
 
-		if tk.IsErrX(rs) {
+		if tk.IsError(rs) {
 			return fmt.Errorf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
 		}
 	}
@@ -1037,6 +1138,7 @@ type QuixieVM struct {
 	Running *RunningContext
 }
 
+// inputA for a RunningContext
 func NewVM(inputA ...interface{}) interface{} {
 	var inputT interface{} = nil
 
@@ -1209,6 +1311,14 @@ func (p *QuixieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
 
 	if idxT == -6 {
 		return tk.Undefined
+	}
+
+	if idxT == -10 {
+		return QuickEval(tk.ToStr(vA.Value), p, runA)
+	}
+
+	if idxT == -16 { // labels
+		return runA.GetLabelIndex(vA.Value)
 	}
 
 	if idxT == 3 { // normal variables
@@ -1757,6 +1867,23 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		} else {
 			return p.Errf(r, "test %v%v failed: %#v <-> %#v", v3, v4, v1, v2)
 		}
+
+		return ""
+	case 151: // loadCode
+
+		var pr any = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		codeT := p.GetVarValue(r, instrT.Params[v1p])
+
+		rsT := p.Load(r, codeT)
+
+		p.SetVar(r, pr, rsT)
 
 		return ""
 
@@ -2385,6 +2512,322 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		return ""
 
+	case 610: // if
+		// tk.Plv(instrT)
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var condT bool
+		var v2 interface{}
+		var v2o interface{}
+		var ok0 bool
+
+		var elseLabelIntT int = -1
+
+		if instrT.ParamLen > 2 {
+			elseLabelT := r.GetLabelIndex(p.GetVarValue(r, instrT.Params[2]))
+
+			if elseLabelT < 0 {
+				return p.Errf(r, "invalid label: %v", elseLabelT)
+			}
+		}
+
+		v2o = instrT.Params[1]
+
+		v2 = p.GetVarValue(r, instrT.Params[1])
+
+		// tk.Plv(instrT)
+		tmpv := p.GetVarValue(r, instrT.Params[0])
+		if GlobalsG.VerboseLevel > 1 {
+			tk.Pl("if %v -> %v", instrT.Params[0], tmpv)
+		}
+
+		condT, ok0 = tmpv.(bool)
+
+		if !ok0 {
+			var tmps string
+			tmps, ok0 = tmpv.(string)
+
+			if ok0 {
+				tmprs := QuickEval(tmps, p, r)
+
+				condT, ok0 = tmprs.(bool)
+			}
+		}
+
+		if !ok0 {
+			return p.Errf(r, "invalid condition parameter: %#v", tmpv)
+		}
+
+		if condT {
+			c2 := r.GetLabelIndex(v2)
+
+			if c2 < 0 {
+				return p.Errf(r, "invalid label: %v", v2o)
+			}
+
+			return c2
+		}
+
+		if elseLabelIntT >= 0 {
+			return elseLabelIntT
+		}
+
+		return ""
+
+	// s2, sok := v2.(string)
+
+	// if !sok {
+	// 	if condT {
+	// 		c2, cok := v2.(int)
+	// 		if cok {
+	// 			// tk.Pln("c2", c2)
+	// 			return c2
+	// 		} else {
+	// 			return p.Errf("无效的标号：%v", v2)
+	// 		}
+	// 	}
+	// } else {
+	// 	if condT {
+	// 		// tk.Pl("s2: %v", s2)
+	// 		if strings.HasPrefix(s2, "+") {
+	// 			// tk.Pl("s2p: %v - %v", p.CodePointerM+tk.ToInt(s2[1:]), p.CodeListM[p.CodePointerM+tk.ToInt(s2[1:])])
+	// 			return p.CodePointerM + tk.ToInt(s2[1:])
+	// 		} else if strings.HasPrefix(s2, "-") {
+	// 			return p.CodePointerM - tk.ToInt(s2[1:])
+	// 		} else {
+	// 			labelPointerT, ok := p.LabelsM[p.VarIndexMapM[s2]]
+	// 			// tk.Pln("labelPointerT", labelPointerT, ok)
+
+	// 			if ok {
+	// 				return labelPointerT
+	// 			} else {
+	// 				return p.ErrStrf("无效的标号：%v", v2)
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	// if elseLabelIntT >= 0 {
+	// 	return elseLabelIntT
+	// }
+
+	// return ""
+
+	case 611: // ifNot
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var condT bool
+		var v2 interface{}
+		var v2o interface{}
+		var ok0 bool
+
+		var elseLabelIntT int = -1
+
+		if instrT.ParamLen > 2 {
+			elseLabelT := r.GetLabelIndex(p.GetVarValue(r, instrT.Params[2]))
+
+			if elseLabelT < 0 {
+				return p.Errf(r, "invalid label: %v", elseLabelT)
+			}
+		}
+
+		v2o = instrT.Params[1]
+
+		v2 = p.GetVarValue(r, instrT.Params[1])
+
+		// tk.Plv(instrT)
+		tmpv := p.GetVarValue(r, instrT.Params[0])
+		if GlobalsG.VerboseLevel > 1 {
+			tk.Pl("if %v -> %v", instrT.Params[0], tmpv)
+		}
+
+		condT, ok0 = tmpv.(bool)
+
+		if !ok0 {
+			var tmps string
+			tmps, ok0 = tmpv.(string)
+
+			if ok0 {
+				tmprs := QuickEval(tmps, p, r)
+
+				condT, ok0 = tmprs.(bool)
+			}
+		}
+
+		if !ok0 {
+			return p.Errf(r, "invalid condition parameter: %#v", tmpv)
+		}
+
+		if !condT {
+			c2 := r.GetLabelIndex(v2)
+
+			if c2 < 0 {
+				return p.Errf(r, "invalid label: %v", v2o)
+			}
+
+			return c2
+		}
+
+		if elseLabelIntT >= 0 {
+			return elseLabelIntT
+		}
+
+		return ""
+
+	case 701: // ==
+		var pr interface{} = -5
+		var v1, v2 interface{}
+
+		if instrT.ParamLen == 0 {
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 1 {
+			pr = instrT.Params[0]
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 2 {
+			v1 = p.GetVarValue(r, instrT.Params[0])
+			v2 = p.GetVarValue(r, instrT.Params[1])
+		} else {
+			pr = instrT.Params[0]
+			v1 = p.GetVarValue(r, instrT.Params[1])
+			v2 = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		v3 := tk.GetEQResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+		return ""
+
+	case 702: // !=
+		var pr interface{} = -5
+		var v1, v2 interface{}
+
+		if instrT.ParamLen == 0 {
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 1 {
+			pr = instrT.Params[0]
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 2 {
+			v1 = p.GetVarValue(r, instrT.Params[0])
+			v2 = p.GetVarValue(r, instrT.Params[1])
+		} else {
+			pr = instrT.Params[0]
+			v1 = p.GetVarValue(r, instrT.Params[1])
+			v2 = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		v3 := tk.GetNEQResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+		return ""
+
+	case 703: // <
+		var pr interface{} = -5
+		var v1, v2 interface{}
+
+		if instrT.ParamLen == 0 {
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 1 {
+			pr = instrT.Params[0]
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 2 {
+			v1 = p.GetVarValue(r, instrT.Params[0])
+			v2 = p.GetVarValue(r, instrT.Params[1])
+		} else {
+			pr = instrT.Params[0]
+			v1 = p.GetVarValue(r, instrT.Params[1])
+			v2 = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		v3 := tk.GetLTResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+		return ""
+
+	case 704: // >
+		var pr interface{} = -5
+		var v1, v2 interface{}
+
+		if instrT.ParamLen == 0 {
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 1 {
+			pr = instrT.Params[0]
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 2 {
+			v1 = p.GetVarValue(r, instrT.Params[0])
+			v2 = p.GetVarValue(r, instrT.Params[1])
+		} else {
+			pr = instrT.Params[0]
+			v1 = p.GetVarValue(r, instrT.Params[1])
+			v2 = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		v3 := tk.GetGTResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+		return ""
+
+	case 705: // <=
+		var pr interface{} = -5
+		var v1, v2 interface{}
+
+		if instrT.ParamLen == 0 {
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 1 {
+			pr = instrT.Params[0]
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 2 {
+			v1 = p.GetVarValue(r, instrT.Params[0])
+			v2 = p.GetVarValue(r, instrT.Params[1])
+		} else {
+			pr = instrT.Params[0]
+			v1 = p.GetVarValue(r, instrT.Params[1])
+			v2 = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		v3 := tk.GetLETResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+		return ""
+
+	case 706: // >=
+		var pr interface{} = -5
+		var v1, v2 interface{}
+
+		if instrT.ParamLen == 0 {
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 1 {
+			pr = instrT.Params[0]
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 2 {
+			v1 = p.GetVarValue(r, instrT.Params[0])
+			v2 = p.GetVarValue(r, instrT.Params[1])
+		} else {
+			pr = instrT.Params[0]
+			v1 = p.GetVarValue(r, instrT.Params[1])
+			v2 = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		v3 := tk.GetGETResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+		return ""
+
 	case 801: // inc
 		if instrT.ParamLen < 1 {
 			v1 := p.Stack.Pop()
@@ -2499,7 +2942,7 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		return ""
 
-	case 901: // add
+	case 901: // add/+
 		// tk.Plv(instrT)
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters")
@@ -2516,35 +2959,284 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
 		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
 
-		var v3 interface{}
+		v3 := tk.GetAddResult(v1, v2)
 
-		switch nv := v1.(type) {
-		case int:
-			v3 = nv + v2.(int)
-		case byte:
-			v3 = nv + v2.(byte)
-		case rune:
-			v3 = nv + v2.(rune)
-		case float64:
-			v3 = nv + v2.(float64)
-		case string:
-			v3 = nv + v2.(string)
-		case time.Time:
-			v3 = nv.Add(time.Duration(time.Millisecond * time.Duration(tk.ToInt(v2))))
-		default:
-			return p.Errf(r, "type not match: %T(%v) -> %T(%v)", v1, v1, v2, v2)
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 902: // sub/-
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
 		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := tk.GetMinusResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 903: // mul/*
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := tk.GetMultiplyResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 904: // div/"/"
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := tk.GetDivResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 905: // mod/%
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := tk.GetModResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 930: // !
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v3 := tk.GetLogicalNotResult(v1)
+
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 931: // not
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v3 := tk.GetBitNotResult(v1)
+
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 933: // &&
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := tk.GetANDResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 934: // ||
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := tk.GetORResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 941: // &
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := tk.GetBitANDResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 942: // |
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := tk.GetBitORResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 943: // ^/xor
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := tk.GetBitXORResult(v1, v2)
+
+		p.SetVar(r, pr, v3)
+
+		return ""
+
+	case 944: // &^/andNot
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := tk.GetBitANDNOTResult(v1, v2)
 
 		p.SetVar(r, pr, v3)
 
 		return ""
 
 	case 1010: // call
-		if instrT.ParamLen < 1 {
+		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough paramters")
 		}
 
-		v1 := p.GetVarValue(r, instrT.Params[0])
+		pr := instrT.Params[0]
+
+		v1p := 1
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
 		v1c := r.GetLabelIndex(v1)
 
@@ -2554,7 +3246,15 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		r.PointerStack.Push(r.CodePointer)
 
+		r.PointerStack.Push(pr)
+
 		r.PushFunc()
+
+		if instrT.ParamLen > 2 {
+			vs := p.ParamsToList(r, instrT, 2)
+
+			r.GetCurrentFuncContext().Vars["inputL"] = vs
+		}
 
 		return v1c
 
@@ -2565,10 +3265,24 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 			return p.Errf(r, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rsi))
 		}
 
+		if instrT.ParamLen > 0 {
+			r.GetCurrentFuncContext().Vars["outL"] = p.GetVarValue(r, instrT.Params[0])
+		}
+
+		pr := r.PointerStack.Pop()
+
+		rs, rok := r.GetCurrentFuncContext().Vars["outL"]
+
 		errT := r.PopFunc()
 
 		if errT != nil {
 			return p.Errf(r, "failed to return from function call: %v", errT)
+		}
+
+		if rok {
+			p.SetVar(r, pr, rs)
+		} else {
+			p.SetVar(r, pr, tk.Undefined)
 		}
 
 		newPointT := r.PointerStack.Pop()
@@ -2578,7 +3292,25 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		}
 
 		return tk.ToInt(newPointT) + 1
-	case 1055: // sealCall
+	case 1050: // sealCall
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		codeT := p.GetVarValue(r, instrT.Params[v1p])
+
+		vs := p.ParamsToList(r, instrT, v1p+1)
+
+		rs := RunCode(codeT, vs, nil)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 1055: // runCall
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters")
 		}
@@ -2591,8 +3323,6 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		vs := p.ParamsToList(r, instrT, v1p+1)
 
 		if s1, ok := codeT.(string); ok {
-			s1 = strings.ReplaceAll(s1, "~~~", "`")
-
 			compiledT := Compile(s1)
 
 			if tk.IsErrX(compiledT) {
@@ -2612,18 +3342,6 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		p.SetVar(r, pr, fmt.Errorf("failed to compile code: %v", codeT))
 		return ""
-
-		// if instrT.ParamLen > 1 {
-		// 	argCountT = tk.ToInt(p.GetVarValue(r, instrT.Params[0]))
-
-		// 	codeT = p.GetVarValue(r, instrT.Params[1]).(string)
-		// } else {
-		// 	codeT = p.GetVarValue(r, instrT.Params[0]).(string)
-		// }
-
-		// codeT = strings.ReplaceAll(codeT, "~~~", "`")
-
-		// return p.CallFunc(codeT, argCountT, vs...)
 
 	case 1070: // fastCall
 		if instrT.ParamLen < 1 {
@@ -2649,7 +3367,7 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 			return p.Errf(r, "pointer stack empty")
 		}
 
-		return rs.(int) + 1
+		return tk.ToInt(rs) + 1
 
 	case 1123: // getArrayItem/[]
 		if instrT.ParamLen < 3 {
@@ -2659,6 +3377,16 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		var pr = instrT.Params[0]
 
 		v1 := p.GetVarValue(r, instrT.Params[1])
+
+		if v1 == nil {
+			if instrT.ParamLen > 3 {
+				p.SetVar(r, pr, p.GetVarValue(r, instrT.Params[3]))
+				return ""
+			} else {
+				return p.Errf(r, "object is nil: (%T)%v", v1, v1)
+			}
+
+		}
 
 		// tk.Pl("v1: %#v, instr: %#v", v1, instrT)
 
@@ -2756,13 +3484,24 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 			}
 
 			p.SetVar(r, pr, nv[v2])
+		case []map[string]interface{}:
+			if (v2 < 0) || (v2 >= len(nv)) {
+				if instrT.ParamLen > 3 {
+					p.SetVar(r, pr, p.GetVarValue(r, instrT.Params[3]))
+					return ""
+				} else {
+					return p.Errf(r, "index out of range: %v/%v", v2, len(nv))
+				}
+			}
+
+			p.SetVar(r, pr, nv[v2])
 		default:
 			if instrT.ParamLen > 3 {
 				p.SetVar(r, pr, p.GetVarValue(r, instrT.Params[3]))
 			} else {
 				p.SetVar(r, pr, tk.Undefined)
 			}
-			return p.Errf(r, "parameter types not match: %#v", instrT)
+			return p.Errf(r, "parameter types not match: %#v", v1)
 		}
 
 		return ""
@@ -2778,6 +3517,74 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		return ""
 
+	case 10411: // plo
+		if instrT.ParamLen < 1 {
+			tk.Plo(p.GetCurrentFuncContext(r).Tmp)
+			return ""
+		}
+
+		vs := p.ParamsToList(r, instrT, 0)
+
+		tk.Plo(vs...)
+
+		return ""
+	case 10420: // pl
+		list1T := []interface{}{}
+
+		formatT := ""
+
+		// tk.Pl("instrT.Params: %v", instrT.Params)
+
+		for i, v := range instrT.Params {
+			// tk.Pl("[%v]: %v %#v", i, v, v)
+			if i == 0 {
+				formatT = tk.ToStr(p.GetVarValue(r, v))
+				continue
+			}
+
+			if v.Ref != -3 && v.Value == "..." {
+				vv := p.GetVarValue(r, v)
+				// tk.Plo(vv)
+
+				switch nv := vv.(type) {
+				case []byte:
+					for _, v9 := range nv {
+						list1T = append(list1T, v9)
+					}
+
+				case []int:
+					for _, v9 := range nv {
+						list1T = append(list1T, v9)
+					}
+
+				case []rune:
+					for _, v9 := range nv {
+						list1T = append(list1T, v9)
+					}
+
+				case []string:
+					for _, v9 := range nv {
+						list1T = append(list1T, v9)
+					}
+
+				case []interface{}:
+					for _, v9 := range nv {
+						list1T = append(list1T, v9)
+					}
+
+				}
+			} else {
+				// tk.Pl("not slice: %v", v)
+				// tk.Pl("not slice value: %v", p.GetVarValue(v))
+				list1T = append(list1T, p.GetVarValue(r, v))
+			}
+
+		}
+
+		fmt.Printf(formatT+"\n", list1T...)
+
+		return ""
+
 	case 10430: // plv
 		if instrT.ParamLen < 1 {
 			tk.Plv(p.GetCurrentFuncContext(r).Tmp)
@@ -2787,6 +3594,25 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		s1 := p.GetVarValue(r, instrT.Params[0])
 
 		tk.Plv(s1)
+
+		return ""
+
+	case 10945: // checkErrX
+		if instrT.ParamLen < 1 {
+			if tk.IsErrX(p.GetCurrentFuncContext(r).Tmp) {
+				// p.RunDeferUpToRoot()
+				return p.Errf(r, tk.GetErrStrX(p.GetCurrentFuncContext(r).Tmp))
+			}
+
+			return ""
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[0])
+
+		if tk.IsErrX(v1) {
+			// p.RunDeferUpToRoot()
+			return p.Errf(r, tk.GetErrStrX(v1))
+		}
 
 		return ""
 
@@ -2805,6 +3631,52 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		// tk.Pln(v1, ",", optsA)
 
 		p.SetVar(r, pr, tk.SystemCmd(v1, optsA...))
+
+		return ""
+
+	case 21101: // loadText
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		fcT, errT := tk.LoadStringFromFileE(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])))
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+		} else {
+			p.SetVar(r, pr, fcT)
+		}
+
+		return ""
+
+	case 21103: // saveText
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		rsT := tk.SaveStringToFile(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])), tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1])))
+
+		if rsT != "" {
+			p.SetVar(r, pr, fmt.Errorf(tk.GetErrStr(rsT)))
+		} else {
+			p.SetVar(r, pr, "")
+		}
 
 		return ""
 
@@ -3009,23 +3881,25 @@ func (p *QuixieVM) RunCompiledCode(codeA *CompiledCode, inputA interface{}) inte
 	return outT
 }
 
-func RunCode(codeA string, objA interface{}, optsA ...string) interface{} {
-	vmT := NewVMQuick()
+func RunCode(codeA interface{}, inputA interface{}, objA map[string]interface{}, optsA ...string) interface{} {
+	vmAnyT := NewVM()
+
+	if tk.IsError(vmAnyT) {
+		return vmAnyT
+	}
+
+	vmT := vmAnyT.(*QuixieVM)
 
 	if len(optsA) > 0 {
 		vmT.SetVar(vmT.Running, "argsG", optsA)
 	}
 
-	objT, ok := objA.(map[string]interface{})
+	for k, v := range objA {
+		vmT.SetVar(vmT.Running, k, v)
+	}
 
-	if ok {
-		for k, v := range objT {
-			vmT.SetVar(vmT.Running, k, v)
-		}
-	} else {
-		if objA != nil {
-			vmT.SetVar(vmT.Running, "inputG", objA)
-		}
+	if inputA != nil {
+		vmT.SetVar(vmT.Running, "inputG", inputA)
 	}
 
 	lrs := vmT.Load(vmT.Running, codeA)
@@ -3041,6 +3915,697 @@ func RunCode(codeA string, objA interface{}, optsA ...string) interface{} {
 
 func (p *QuixieVM) Debug() {
 	tk.Pln(tk.ToJSONX(p, "-indent", "-sort"))
+}
+
+type ExprElement struct {
+	// 0: value, 1: operator， 5: eval, 6: (, 7: ), 9: end
+	Type     int
+	Priority int
+	Value    string
+}
+
+var OperatorPriorityMap map[string]int = map[string]int{
+	"||": 20,
+	"&&": 25,
+
+	"|": 30,
+	"^": 33,
+	"&": 35,
+
+	"==": 40,
+	"!=": 40,
+	"<>": 40,
+
+	">":  50,
+	"<":  50,
+	">=": 50,
+	"<=": 50,
+
+	">>": 60,
+	"<<": 60,
+
+	"+": 70,
+	"-": 70,
+
+	"*": 80,
+	"/": 80,
+	"%": 80,
+
+	"1!": 99,
+	"++": 99,
+	"--": 99,
+	"1+": 99,
+	"1-": 99,
+	"1&": 99,
+	"1*": 99,
+	"1^": 99,
+}
+
+func SplitExpr(strA string) ([]ExprElement, error) {
+	runeT := []rune(strings.TrimSpace(strA))
+
+	elementsT := make([]ExprElement, 0)
+
+	// 0: start, 1: operator, 2: value, 3: value in quote such as "abc", 4: wait slash in quote such as "ab\n", 5: blank after value, 6: in {}
+	stateT := 0
+
+	opT := ""
+	valueT := ""
+
+	for _, v := range runeT {
+		// tk.Pl("state: %v, v: %v(%v), op: %v, value: %v, list: %v", stateT, v, string(v), opT, valueT, elementsT)
+		if stateT == 0 { // 开始或非值后空白（运算符后）
+			switch v {
+			case ' ':
+				break
+			case '"':
+				stateT = 3
+				valueT = `"`
+				break
+			case '{':
+				stateT = 6
+				valueT = ``
+				break
+			case '+', '-', '*', '!', '&', '^':
+				stateT = 1
+				opT = "1" + string(v)
+				break
+			case '(':
+				stateT = 0
+				elementsT = append(elementsT, ExprElement{Type: 6, Priority: 0, Value: "("})
+				break
+			case ')':
+				return nil, fmt.Errorf("无法匹配的括号")
+			case '}':
+				return nil, fmt.Errorf("无法匹配的花括号")
+				// stateT = 0
+				// elementsT = append(elementsT, ExprElement{Type: 7, Priority: 0, Value: ")"})
+				// break
+			default:
+				stateT = 2
+				valueT = string(v)
+				break
+			}
+
+			continue
+		} else if stateT == 5 { // 值后的空白
+			switch v {
+			case ' ':
+				break
+			case '"':
+				stateT = 3
+				valueT = `"`
+				break
+			case '{':
+				stateT = 6
+				valueT = ``
+				break
+			case '+', '-', '*', '/', '%', '!', '&', '|', '=', '<', '>', '^':
+				stateT = 1
+				opT = string(v)
+				break
+			case '(':
+				stateT = 0
+				elementsT = append(elementsT, ExprElement{Type: 6, Priority: 0, Value: "("})
+				break
+			case ')':
+				stateT = 5
+				elementsT = append(elementsT, ExprElement{Type: 7, Priority: 0, Value: ")"})
+				break
+			case '}':
+				return nil, fmt.Errorf("无法匹配的花括号")
+				break
+			default:
+				stateT = 2
+				valueT = string(v)
+				break
+			}
+
+			continue
+		} else if stateT == 1 { // 进入运算符阶段
+			switch v {
+			case ' ':
+				stateT = 0
+				opT = strings.TrimSpace(opT)
+				if len(opT) > 0 {
+					elementsT = append(elementsT, ExprElement{Type: 1, Priority: OperatorPriorityMap[opT], Value: opT})
+				}
+				opT = ""
+				break
+			case '+', '-', '*', '/', '%', '!', '&', '|', '=', '<', '>', '^':
+				opT += string(v)
+				break
+			case '(':
+				stateT = 0
+				opT = strings.TrimSpace(opT)
+				if len(opT) > 0 {
+					elementsT = append(elementsT, ExprElement{Type: 1, Priority: OperatorPriorityMap[opT], Value: opT})
+				}
+				opT = ""
+				elementsT = append(elementsT, ExprElement{Type: 6, Priority: 0, Value: "("})
+				break
+			case ')':
+				stateT = 5
+				opT = strings.TrimSpace(opT)
+				if len(opT) > 0 {
+					elementsT = append(elementsT, ExprElement{Type: 1, Priority: OperatorPriorityMap[opT], Value: opT})
+				}
+				opT = ""
+				elementsT = append(elementsT, ExprElement{Type: 7, Priority: 0, Value: ")"})
+				break
+			case '{':
+				stateT = 6
+				opT = strings.TrimSpace(opT)
+				if len(opT) > 0 {
+					elementsT = append(elementsT, ExprElement{Type: 1, Priority: OperatorPriorityMap[opT], Value: opT})
+				}
+				opT = ""
+				break
+			case '}':
+				return nil, fmt.Errorf("无法匹配的花括号")
+				break
+			default:
+				stateT = 2
+				opT = strings.TrimSpace(opT)
+				if len(opT) > 0 {
+					elementsT = append(elementsT, ExprElement{Type: 1, Priority: OperatorPriorityMap[opT], Value: opT})
+				}
+				opT = ""
+				valueT = string(v)
+				break
+			}
+
+			continue
+		} else if stateT == 2 { // 进入值阶段
+			switch v {
+			case '+', '-', '*', '/', '%', '!', '&', '|', '=', '<', '>', '^':
+				stateT = 1
+				opT = string(v)
+
+				valueT = strings.TrimSpace(valueT)
+				if len(valueT) > 0 {
+					elementsT = append(elementsT, ExprElement{Type: 0, Priority: 0, Value: valueT})
+				}
+				valueT = ""
+				break
+			case '(':
+				stateT = 0
+				valueT = strings.TrimSpace(valueT)
+				if len(valueT) > 0 {
+					elementsT = append(elementsT, ExprElement{Type: 0, Priority: 0, Value: valueT})
+				}
+				valueT = ""
+				elementsT = append(elementsT, ExprElement{Type: 6, Priority: 0, Value: "("})
+				break
+			case ')':
+				stateT = 5
+				valueT = strings.TrimSpace(valueT)
+				if len(valueT) > 0 {
+					elementsT = append(elementsT, ExprElement{Type: 0, Priority: 0, Value: valueT})
+				}
+				valueT = ""
+				elementsT = append(elementsT, ExprElement{Type: 7, Priority: 0, Value: ")"})
+				break
+			default:
+				valueT += string(v)
+				break
+			}
+
+			continue
+		} else if stateT == 3 { // 值中的双引号内
+			switch v {
+			case '"':
+				valueT += `"`
+				elementsT = append(elementsT, ExprElement{Type: 0, Priority: 0, Value: valueT})
+				stateT = 5
+				break
+			case '\\':
+				valueT += string(v)
+				stateT = 4
+				break
+			default:
+				valueT += string(v)
+				break
+			}
+
+			continue
+		} else if stateT == 4 { //  值中的双引号内的转义字符
+			switch v {
+			default:
+				// tmps, errT := strconv.Unquote(`"` + "\\" + string(v) + `"`)
+				// if errT != nil {
+				// 	return nil, errT
+				// }
+				valueT += string(v) //tmps
+				stateT = 3
+				break
+			}
+
+			continue
+		} else if stateT == 6 { // 值中的花括号内
+			switch v {
+			case '}':
+				// valueT += `}`
+				elementsT = append(elementsT, ExprElement{Type: 5, Priority: 0, Value: valueT})
+				stateT = 5
+				break
+			default:
+				valueT += string(v)
+				break
+			}
+
+			continue
+		}
+	}
+
+	if stateT == 0 {
+	} else if stateT == 5 {
+	} else if stateT == 1 {
+		opT = strings.TrimSpace(opT)
+		if len(opT) > 0 {
+			elementsT = append(elementsT, ExprElement{Type: 1, Priority: OperatorPriorityMap[opT], Value: opT})
+		}
+	} else if stateT == 2 {
+		valueT = strings.TrimSpace(valueT)
+		if len(valueT) > 0 {
+			elementsT = append(elementsT, ExprElement{Type: 0, Priority: 0, Value: valueT})
+		}
+	} else if stateT == 3 || stateT == 4 {
+		return nil, fmt.Errorf("表达式格式错误双引号不匹配")
+	} else if stateT == 6 {
+		return nil, fmt.Errorf("表达式格式错误花引号不匹配")
+	}
+
+	// tk.Plv(elementsT)
+
+	backElementsT := make([]ExprElement, 0)
+
+	opStackT := tk.NewSimpleStack(len(elementsT) + 1)
+
+	for _, v := range elementsT {
+		// tk.Pl("process %v, %v, %v", v, backElementsT, opStackT)
+		if v.Type == 0 {
+			backElementsT = append(backElementsT, v)
+		} else if v.Type == 5 {
+			backElementsT = append(backElementsT, v)
+		} else if v.Type == 1 {
+			opLast := opStackT.Peek()
+
+			if opLast == nil {
+				opStackT.Push(v)
+			} else {
+				opLastValue := opLast.(ExprElement)
+				if v.Priority > opLastValue.Priority {
+
+				} else {
+					backElementsT = append(backElementsT, opStackT.Pop().(ExprElement))
+				}
+
+				opStackT.Push(v)
+			}
+
+			// backElementsT = append(backElementsT, v)
+		} else if v.Type == 6 {
+			opStackT.Push(v)
+			// backElementsT = append(backElementsT, v)
+		} else if v.Type == 7 {
+			for {
+				opLast := opStackT.Pop()
+
+				// tk.Plv(opLast)
+
+				if opLast == nil {
+					// tk.Pl("() not match")
+					return nil, fmt.Errorf("括号配对错误")
+				}
+
+				opLastValue := opLast.(ExprElement)
+				if opLastValue.Type == 6 {
+					break
+				} else {
+					backElementsT = append(backElementsT, opLastValue)
+				}
+			}
+		}
+	}
+
+	for {
+		opLast := opStackT.Pop()
+
+		if opLast == nil {
+			break
+		}
+
+		opLastValue := opLast.(ExprElement)
+		backElementsT = append(backElementsT, opLastValue)
+	}
+
+	// tk.Pl("[] %#v", backElementsT)
+
+	return backElementsT, nil
+}
+
+// func NewInstr(codeA string, valuesA *map[string]interface{}) Instr {
+// 	v := strings.TrimSpace(codeA)
+
+// 	if tk.StartsWith(v, "//") || tk.StartsWith(v, "#") {
+// 		instrT := Instr{Code: 101, Cmd: InstrCodeSet[101], ParamLen: 0}
+// 		return instrT
+// 	}
+
+// 	// var varCountT int
+
+// 	if tk.StartsWith(v, ":") {
+// 		instrT := Instr{Code: InstrNameSet["pass"], Cmd: InstrCodeSet[101], ParamLen: 0}
+// 		return instrT
+// 	}
+
+// 	listT, lineT, errT := p.ParseLine(v)
+// 	if errT != nil {
+// 		instrT := Instr{Code: InstrNameSet["invalidInstr"], Cmd: "invalidInstr", ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: "参数解析失败"}}, Line: lineT}
+// 		return instrT
+// 	}
+
+// 	lenT := len(listT)
+
+// 	instrNameT := strings.TrimSpace(listT[0])
+
+// 	codeT, ok := InstrNameSet[instrNameT]
+
+// 	if !ok {
+// 		instrT := Instr{Code: InstrNameSet["invalidInstr"], Cmd: "invalidInstr", ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: tk.Spr("未知指令：%v", instrNameT)}}}
+// 		return instrT
+// 	}
+
+// 	instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], Params: make([]VarRef, 0, lenT-1)} //&([]VarRef{})}
+
+// 	list3T := []VarRef{}
+
+// 	for j, jv := range listT {
+// 		if j == 0 {
+// 			continue
+// 		}
+
+// 		if strings.HasPrefix(jv, "~") {
+// 			list3T = append(list3T, VarRef{-3, (*valuesA)[jv]})
+// 		} else {
+// 			list3T = append(list3T, p.ParseVar(jv))
+// 		}
+
+// 	}
+
+// 	instrT.Params = append(instrT.Params, list3T...)
+// 	instrT.ParamLen = lenT - 1
+
+// 	return instrT
+// }
+
+func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
+
+	listT, errT := SplitExpr(strA)
+
+	if errT != nil {
+		return fmt.Errorf("分析表达式失败：%v", errT)
+	}
+
+	valueStackT := tk.NewSimpleStack(len(listT) + 1)
+
+	for _, v := range listT {
+		// tk.Pl("item: %v", v)
+		if v.Type == 0 {
+			v1T := ParseVar(v.Value)
+			vv1T := p.GetVarValue(r, v1T)
+
+			// tk.Plvx(vv1T)
+
+			valueStackT.Push(vv1T)
+		} else if v.Type == 5 { // eval
+
+			// v1T := p.ParseVar(v.Value)
+			// vv1T := p.EvalExpression(v1T)
+
+			// tk.Pl("v.Value: %v", v.Value)
+
+			codeStrT := strings.ReplaceAll(v.Value, "<BR />", "\n")
+
+			compiledT := Compile(codeStrT)
+
+			if tk.IsError(compiledT) {
+				return fmt.Errorf("failed to compile the instructions: %v(%v)", compiledT, v.Value)
+			}
+
+			compiledObjT := compiledT.(*CompiledCode)
+
+			for i1, i1v := range compiledObjT.InstrList {
+				rs := RunInstr(p, r, &i1v)
+
+				if tk.IsError(rs) {
+					return fmt.Errorf("failed to run the instruction[%v]: %v(%v)", i1, rs, i1v)
+				}
+			}
+
+			// 表达式应将结果存入$tmp
+			valueStackT.Push(p.GetCurrentFuncContext(r).Tmp)
+		} else if v.Type == 1 {
+			switch v.Value {
+			case "1-":
+				v1 := valueStackT.Pop()
+
+				vr := tk.GetNegativeResult(v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "1!":
+				v1 := valueStackT.Pop()
+
+				vr := tk.GetNegativeResult(v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "+":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				// tk.Pl("|%#v| |%#v|", v1, v2)
+
+				vr := tk.GetAddResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "-":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetMinusResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "*":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetMultiplyResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "/":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetDivResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "%":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetModResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "==":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetEQResult(v2, v1)
+
+				// tk.Plvsr(v1, v2, vr)
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "!=", "<>":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetNEQResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case ">":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetGTResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "<":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetLTResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case ">=":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetGETResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "<=":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetLETResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "&&":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetANDResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "||":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetORResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "&":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetBitANDResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "|":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetBitORResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "^":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetBitXORResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "&^":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetBitANDNOTResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			default:
+				return fmt.Errorf("未知运算符：%v", v.Value)
+			}
+		}
+
+		// tk.Pl("vStack: %v", valueStackT)
+	}
+
+	vr := valueStackT.Pop()
+
+	return vr
 }
 
 var GlobalsG *GlobalContext
