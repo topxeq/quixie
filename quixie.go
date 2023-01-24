@@ -29,7 +29,14 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"pass": 101, // do nothing, useful for placeholder
 
+	"debug": 102,
+
 	"debugInfo": 103, // get the debug info
+	"varInfo":   104, // get the information of the variables
+
+	"help": 105, // not implemented
+
+	"onError": 106,
 
 	"test":             121, // for test purpose, check if 2 values are equal
 	"testByStartsWith": 122, // for test purpose, check if first string starts with the 2nd
@@ -164,6 +171,9 @@ var InstrNameSet map[string]int = map[string]int{
 	// file related
 	"loadText": 21101, // load text from file
 
+	// GUI related
+	"alert":    400001, // 类似JavaScript中的alert，弹出对话框，显示一个字符串或任意数字、对象的字符串表达
+	"guiAlert": 400001,
 }
 
 // type UndefinedStruct struct {
@@ -740,6 +750,8 @@ type RunningContext struct {
 
 	FuncStack *tk.SimpleStack
 
+	ErrorHandler int
+
 	// Parent interface{}
 }
 
@@ -754,6 +766,8 @@ func (p *RunningContext) Initialize() {
 	p.PointerStack = tk.NewSimpleStack(10, tk.Undefined)
 
 	p.FuncStack = tk.NewSimpleStack(10, tk.Undefined)
+
+	p.ErrorHandler = -1
 }
 
 func (p *RunningContext) LoadCompiled(compiledA *CompiledCode) error {
@@ -914,7 +928,7 @@ func (p *FuncContext) RunDefer(vmA *QuixieVM, rcA *RunningContext) error {
 		rs := RunInstr(vmA, rcA, nv)
 
 		if tk.IsError(rs) {
-			return fmt.Errorf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
+			return fmt.Errorf("[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
 		}
 	}
 
@@ -1027,7 +1041,7 @@ func (p *RunningContext) RunDefer(vmA *QuixieVM) error {
 	// 	rs := RunInstr(vmA, p, nv)
 
 	// 	if tk.IsErrX(rs) {
-	// 		return fmt.Errorf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
+	// 		return fmt.Errorf("[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
 	// 	}
 	// }
 
@@ -1079,7 +1093,7 @@ func (p *RunningContext) RunDefer(vmA *QuixieVM) error {
 // 		rs := RunInstr(p.Parent.(*QuixieVM), p, nv)
 
 // 		if tk.IsErrX(rs) {
-// 			return fmt.Errorf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
+// 			return fmt.Errorf("[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
 // 		}
 // 	}
 
@@ -1344,6 +1358,43 @@ func (p *QuixieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
 	}
 
 	return tk.Undefined
+
+}
+
+func (p *QuixieVM) GetVarLayer(runA *RunningContext, vA VarRef) int {
+	if runA == nil {
+		runA = p.Running
+	}
+
+	idxT := vA.Ref
+
+	if idxT < 0 {
+		return idxT
+	}
+
+	if idxT == 3 { // normal variables
+		lenT := runA.FuncStack.Size()
+
+		for idxT := lenT - 1; idxT >= 0; idxT-- {
+			loopFunc := runA.FuncStack.PeekLayer(idxT).(*FuncContext)
+			_, ok := loopFunc.Vars[vA.Value.(string)]
+
+			if ok {
+				return idxT
+			}
+		}
+
+		_, ok := p.RootFunc.Vars[vA.Value.(string)]
+
+		if ok {
+			return 0
+		}
+
+		return -1
+
+	}
+
+	return -999
 
 }
 
@@ -1735,18 +1786,24 @@ func (p *QuixieVM) ParamsToList(runA *RunningContext, v *Instr, fromA int) []int
 
 func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{}) {
 	defer func() {
-		if r := recover(); r != nil {
+		if r1 := recover(); r1 != nil {
 			// tk.Printfln("exception: %v", r)
+			if r.ErrorHandler > -1 {
 
-			resultR = fmt.Errorf("runtime exception: %v\n%v", r, string(debug.Stack()))
+				p.Stack.Push(p.Errf(r, "runtime error: %v\n%v", r, string(debug.Stack())))
+				p.Stack.Push(tk.ToStr(r))
+				p.Stack.Push(r.CodeSourceMap[r.CodePointer] + 1)
+				resultR = r.ErrorHandler
+				return
+			}
+
+			resultR = fmt.Errorf("runtime exception: %v\n%v", r1, string(debug.Stack()))
 
 			return
 		}
 	}()
 
-	var instrT *Instr
-
-	instrT = instrA
+	var instrT *Instr = instrA
 
 	// if p.VerbosePlusM {
 	// tk.Plv(instrT)
@@ -1770,6 +1827,17 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 	case 101: // pass
 		return ""
 
+	case 102: // debug
+		outT := map[string]interface{}{
+			"VM":                    p,
+			"CurrentRunningContext": r,
+			"Instr":                 instrT,
+		}
+
+		tk.Pl("[DEBUG INFO] %v", tk.ToJSONX(outT, "-indent", "-sort"))
+
+		return ""
+
 	case 103: // debugInfo
 		var pr any = -5
 		if instrT.ParamLen > 0 {
@@ -1783,6 +1851,32 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		}
 
 		p.SetVar(r, pr, tk.ToJSONX(outT, "-indent", "-sort"))
+
+		return ""
+	case 104: // varInfo
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		p.SetVar(r, pr, fmt.Sprintf("[变量信息]: %v(行：%v) -> (%T) %v", instrT.Params[v1p].Ref, p.GetVarLayer(r, instrT.Params[v1p]), v1, v1))
+
+		return ""
+	case 106: // onError
+		if instrT.ParamLen < 1 {
+			r.ErrorHandler = -1
+			return ""
+		}
+
+		r.ErrorHandler = tk.ToInt(p.GetVarValue(r, instrT.Params[0]))
 
 		return ""
 
@@ -3262,7 +3356,7 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		rsi := r.RunDefer(p)
 
 		if tk.IsErrX(rsi) {
-			return p.Errf(r, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rsi))
+			return p.Errf(r, "[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rsi))
 		}
 
 		if instrT.ParamLen > 0 {
@@ -3680,6 +3774,29 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		return ""
 
+	case 400001: // alert
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		v0, ok := p.GetVarValue(r, ParseVar("$guiG")).(tk.TXDelegate)
+
+		if !ok {
+			return p.Errf(r, "global variable $guiG not exists")
+		}
+
+		v1p := 0
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		rs := v0("showInfo", p, nil, "", fmt.Sprintf("%v", v1))
+
+		if tk.IsErrX(rs) {
+			return p.Errf(r, tk.GetErrStrX(rs))
+		}
+
+		return ""
+
 		// end of switch
 
 		//// ------ cmd end
@@ -3709,10 +3826,20 @@ func (p *QuixieVM) Run(posA ...int) interface{} {
 		if ok {
 			p.Running.CodePointer = c1T
 		} else {
-			if tk.IsErrX(resultT) {
+			if tk.IsError(resultT) {
+				if p.Running.ErrorHandler > -1 {
+					p.Stack.Push(tk.GetErrStrX(resultT))
+					p.Stack.Push("runtime error")
+					p.Stack.Push(p.Running.CodeSourceMap[p.Running.CodePointer] + 1)
+
+					p.Running.CodePointer = p.Running.ErrorHandler
+
+					continue
+				}
+
 				p.RunDeferUpToRoot(p.Running)
-				return p.Errf(p.Running, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(resultT))
-				// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
+				return p.Errf(p.Running, "[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(resultT))
+				// tk.Pl("[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
 				// break
 			}
 
@@ -3725,8 +3852,8 @@ func (p *QuixieVM) Run(posA ...int) interface{} {
 
 			if tk.IsErrStrX(rs) {
 				p.RunDeferUpToRoot(p.Running)
-				return p.Errf(p.Running, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStr(rs))
-				// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
+				return p.Errf(p.Running, "[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStr(rs))
+				// tk.Pl("[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
 				// break
 			}
 
@@ -3767,7 +3894,7 @@ func (p *QuixieVM) Run(posA ...int) interface{} {
 	rsi := p.RunDeferUpToRoot(p.Running)
 
 	if tk.IsErrX(rsi) {
-		return tk.ErrStrf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rsi))
+		return tk.ErrStrf("[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rsi))
 	}
 
 	// tk.Pl(tk.ToJSONX(p, "-indent", "-sort"))
@@ -3812,8 +3939,8 @@ func (p *QuixieVM) RunCompiledCode(codeA *CompiledCode, inputA interface{}) inte
 		} else {
 			if tk.IsErrX(resultT) {
 				rp.RunDeferUpToRoot(p)
-				return p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(resultT))
-				// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
+				return p.Errf(rp, "[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(resultT))
+				// tk.Pl("[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
 				// break
 			}
 
@@ -3826,8 +3953,8 @@ func (p *QuixieVM) RunCompiledCode(codeA *CompiledCode, inputA interface{}) inte
 
 			if tk.IsErrStrX(rs) {
 				rp.RunDeferUpToRoot(p)
-				return p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStr(rs))
-				// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
+				return p.Errf(rp, "[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStr(rs))
+				// tk.Pl("[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
 				// break
 			}
 
@@ -3868,7 +3995,7 @@ func (p *QuixieVM) RunCompiledCode(codeA *CompiledCode, inputA interface{}) inte
 	rsi := rp.RunDeferUpToRoot(p)
 
 	if tk.IsErrX(rsi) {
-		return tk.ErrStrf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rsi))
+		return tk.ErrStrf("[%v](quixie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rsi))
 	}
 
 	// tk.Pl(tk.ToJSONX(p, "-indent", "-sort"))

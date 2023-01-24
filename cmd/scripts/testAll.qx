@@ -2,6 +2,14 @@ systemCmd $rs "qx" "-gopath" "basic.qx"
 
 test $rs "abc qqq\n10\n" $seq "basic.qx"
 
+systemCmd $rs "qx" "-gopath" "assign.qx"
+
+test $rs "(string)abc\n(string)abc 123\n(string)abc 123\nand this\n(int)3\n(int)3\n(float64)3\n" $seq "assign.qx"
+
+systemCmd $rs "qx" "-gopath" "add.qx"
+
+test $rs "(int)7\n(float64)4.1\n(string)abc123 456\n(string)9.18abc123 456\n(int)208\n" $seq "add.qx"
+
 systemCmd $rs "qx" "-gopath" "goto.qx"
 
 test $rs "start...\nlabel1 = 1.8\nc = 1.8\n" $seq "goto.qx"
@@ -37,4 +45,9 @@ test $rs "num1= 1.62\nnum2= 2.8\n4.536\nseal-function result: 4.536\n" $seq "sea
 systemCmd $rs "qx" "-gopath" "loadModule.qx"
 
 test $rs "code loaded:  \n :add1\r\n    pop $v2L\r\n    pop $v1L\r\n\r\n    add $push $v1L $v2L\r\n\r\n    fastRet\r\n\r\n:sub1\r\n    pop $v2L\r\n    pop $v1L\r\n\r\n    sub $push $v1L $v2L\r\n    \r\n    fastRet \n\n(int)23\n(int)18\n(int)1782\n" $seq "loadModule.qx"
+
+systemCmd $rs "qx" "-gopath" "onError.qx"
+
+test $rs "error occurred while running to line 8: runtime error, detail: (Line 8: getArrayItem $item $array1 1) index out of range: 1/0\ncalculation completed(and the error handler)\n" $seq "onError.qx"
+
 

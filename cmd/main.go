@@ -1036,7 +1036,7 @@ func main() {
 	baseBinNameT := filepath.Base(binNameT)
 
 	if binNameT != "" {
-		if !tk.StartsWith(baseBinNameT, "quixie") {
+		if !tk.StartsWith(baseBinNameT, "qx") {
 			text1T := tk.Trim(`740404`)
 			text2T := tk.Trim(`690415`)
 			text3T := tk.Trim(`040626`)
