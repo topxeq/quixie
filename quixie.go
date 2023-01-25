@@ -153,10 +153,17 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"fastRet": 1071, // return from fast function, used with fastCall
 
+	"for": 1080, // for loop, usage: for @`$a < #i10` `++ $a` :cont1 :+1 , if the quick eval result is true(bool value), goto label :cont1, otherwise goto :+1(the next line/instr), the same as in C/C++ "for (; a < 10; a++) {...}"
+
 	// array/slice related 数组/切片相关
 
 	"getArrayItem": 1123,
 	"[]":           1123,
+
+	// control related
+	"continue": 1210, // continue the loop or range, PS "continue 2" means continue the upper loop in nested loop, "continue 1" means continue the upper of upper loop, default is 1 but could be omitted
+
+	"break": 1211, // break the loop or range, PS "break 2" means break the upper loop in nested loop
 
 	// print related
 	"pln": 10410, // same as println function in other languages
@@ -172,6 +179,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"checkErrX": 10945, // check if variable is error or err string, and terminate the program if true
 
 	// system related
+
+	"sleep": 20501, // sleep for n seconds(float, 0.001 means 1 millisecond)
+
 	"systemCmd": 20601,
 
 	// file related
@@ -1340,6 +1350,7 @@ func (p *QuixieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
 	}
 
 	if idxT == -10 {
+		// tk.Pln("getvarvalue", vA.Value)
 		return QuickEval(tk.ToStr(vA.Value), p, runA)
 	}
 
@@ -1796,6 +1807,127 @@ func (p *QuixieVM) ParamsToList(runA *RunningContext, v *Instr, fromA int) []int
 	return sl
 }
 
+type LoopStruct struct {
+	Cond       interface{}
+	LoopIndex  int
+	BreakIndex int
+	LoopInstr  *Instr
+}
+
+func EvalCondition(condA interface{}, vmA *QuixieVM, runA *RunningContext) interface{} {
+	// tk.Plo("condA: ", condA)
+	var resultT, ok bool
+	switch nv := condA.(type) {
+	case bool:
+		resultT = nv
+	case string:
+		rs := QuickEval(nv, vmA, runA)
+
+		resultT, ok = rs.(bool)
+
+		if !ok {
+			return fmt.Errorf("unsupport condition type: %T(%#v)", condA, condA)
+		}
+	case VarRef:
+		typeT := nv.Ref
+
+		if typeT == -10 {
+			rs := QuickEval(tk.ToStr(nv.Value), vmA, runA)
+
+			resultT, ok = rs.(bool)
+
+			if !ok {
+				return fmt.Errorf("unsupport condition type: %T(%#v)", condA, condA)
+			}
+		} else if typeT == -3 {
+			nv1, ok := nv.Value.(bool)
+
+			if ok {
+				resultT = nv1
+			} else {
+				rs := QuickEval(tk.ToStr(nv.Value), vmA, runA)
+
+				resultT, ok = rs.(bool)
+
+				if !ok {
+					return fmt.Errorf("unsupport condition type: %T(%#v)", condA, condA)
+				}
+			}
+		} else {
+			rs := vmA.GetVarValue(runA, nv)
+
+			resultT, ok = rs.(bool)
+
+			if !ok {
+				return fmt.Errorf("unsupport condition type: %T(%#v)", condA, condA)
+			}
+		}
+	case *VarRef:
+		typeT := nv.Ref
+
+		if typeT == -10 {
+			rs := QuickEval(tk.ToStr(nv.Value), vmA, runA)
+
+			resultT, ok = rs.(bool)
+
+			if !ok {
+				return fmt.Errorf("unsupport condition type: %T(%#v)", condA, condA)
+			}
+		} else if typeT == -3 {
+			nv1, ok := nv.Value.(bool)
+
+			if ok {
+				resultT = nv1
+			} else {
+				rs := QuickEval(tk.ToStr(nv.Value), vmA, runA)
+
+				resultT, ok = rs.(bool)
+
+				if !ok {
+					return fmt.Errorf("unsupport condition type: %T(%#v)", condA, condA)
+				}
+			}
+		} else {
+			rs := vmA.GetVarValue(runA, *nv)
+
+			resultT, ok = rs.(bool)
+
+			if !ok {
+				return fmt.Errorf("unsupport condition type: %T(%#v)", condA, condA)
+			}
+		}
+	default:
+		return fmt.Errorf("unsupport condition type: %T(%#v)", condA, condA)
+	}
+
+	return resultT
+}
+
+// if contA == true, if p.Cond == true, return p.LoopIndex; if contA == false, if p.Cond == true, return p.BreakIndex; ...
+func (p *LoopStruct) ContinueCheck(contA bool, vmA *QuixieVM, runA *RunningContext) interface{} {
+	var resultT = EvalCondition(p.Cond, vmA, runA)
+
+	if tk.IsError(resultT) {
+		return fmt.Errorf("unsupport condition type: %T(%#v)", p.Cond, p.Cond)
+	}
+
+	resultBoolT := resultT.(bool)
+
+	if contA {
+		if resultBoolT {
+			return p.LoopIndex
+		} else {
+			return p.BreakIndex
+		}
+	}
+
+	if !resultBoolT {
+		return p.LoopIndex
+	} else {
+		return p.BreakIndex
+	}
+}
+
 func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{}) {
 	defer func() {
 		if r1 := recover(); r1 != nil {
@@ -1820,6 +1952,10 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 	// if p.VerbosePlusM {
 	// tk.Plv(instrT)
 	// }
+
+	if instrT == nil {
+		return p.Errf(r, "nil instr: %v", instrT)
+	}
 
 	cmdT := instrT.Code
 
@@ -2683,6 +2819,8 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 			if elseLabelT < 0 {
 				return p.Errf(r, "invalid label: %v", elseLabelT)
 			}
+
+			elseLabelIntT = elseLabelT
 		}
 
 		v2o = instrT.Params[1]
@@ -2785,6 +2923,8 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 			if elseLabelT < 0 {
 				return p.Errf(r, "invalid label: %v", elseLabelT)
 			}
+
+			elseLabelIntT = elseLabelT
 		}
 
 		v2o = instrT.Params[1]
@@ -3540,6 +3680,62 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		}
 
 		return tk.ToInt(rs) + 1
+	case 1080: // for
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		v1 := instrT.Params[0]
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[1]))
+		v3 := p.GetVarValue(r, instrT.Params[2])
+
+		var v4 interface{} = ":+1"
+
+		if instrT.ParamLen > 3 {
+			v4 = p.GetVarValue(r, instrT.Params[3])
+		}
+
+		compiledT := Compile(v2)
+
+		if tk.IsError(compiledT) {
+			return p.Errf(r, "failed to compile instr: %v", v2)
+		}
+
+		label1 := r.GetLabelIndex(v3)
+
+		if label1 < 0 {
+			return p.Errf(r, "failed to get continue index: %v", v3)
+		}
+
+		label2 := r.GetLabelIndex(v4)
+
+		if label2 < 0 {
+			return p.Errf(r, "failed to get break index: %v", v4)
+		}
+
+		rs := EvalCondition(v1, p, r)
+
+		if tk.IsError(rs) {
+			return p.Errf(r, "failed to eval condition: %v", v1)
+		}
+
+		rsbT := rs.(bool)
+
+		if rsbT {
+			var instr1 *Instr = nil
+			compiled1 := compiledT.(*CompiledCode)
+			if len(compiled1.InstrList) > 0 {
+				instr1 = &compiled1.InstrList[0]
+			}
+
+			r.PointerStack.Push(LoopStruct{Cond: v1, LoopInstr: instr1, LoopIndex: label1, BreakIndex: label2})
+
+			return label1
+		}
+
+		return label2
+
+		return ""
 
 	case 1123: // getArrayItem/[]
 		if instrT.ParamLen < 3 {
@@ -3678,6 +3874,82 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		return ""
 
+	case 1210: // continue
+		// tk.Plo("continue PointerStack", r.PointerStack)
+		levelT := 1
+		if instrT.ParamLen > 0 {
+			levelT = tk.ToInt(p.GetVarValue(r, instrT.Params[0]), 1)
+		}
+
+		for kk := 1; kk < levelT; kk++ {
+			r.PointerStack.Pop()
+		}
+
+		v1 := r.PointerStack.Peek()
+
+		if tk.IsUndefined(v1) {
+			return p.Errf(r, "no loop/range object in pointer stack: %#v", v1)
+		}
+
+		switch nv := v1.(type) {
+		case LoopStruct:
+			if nv.LoopInstr != nil {
+				rsc := RunInstr(p, r, nv.LoopInstr)
+
+				if tk.IsError(rsc) {
+					return p.Errf(r, "failed to run loop instr(%#v): %v", nv.LoopInstr, rsc)
+				}
+			}
+
+			rs := EvalCondition(nv.Cond, p, r)
+
+			if tk.IsError(rs) {
+				return p.Errf(r, "failed to eval condition: %#v", nv.Cond)
+			}
+
+			rsbT := rs.(bool)
+
+			if rsbT {
+				return nv.LoopIndex
+			} else {
+				r.PointerStack.Pop()
+
+				return nv.BreakIndex
+			}
+		default:
+			return p.Errf(r, "unsupport loop/range structure type: %#v", v1)
+		}
+
+		return ""
+
+	case 1211: // break
+		// tk.Plo("break PointerStack", r.PointerStack)
+		levelT := 1
+		if instrT.ParamLen > 0 {
+			levelT = tk.ToInt(p.GetVarValue(r, instrT.Params[0]), 1)
+		}
+
+		for kk := 1; kk < levelT; kk++ {
+			r.PointerStack.Pop()
+		}
+
+		v1 := r.PointerStack.Pop()
+
+		if tk.IsUndefined(v1) {
+			return p.Errf(r, "no loop/range object in pointer stack: %#v", v1)
+		}
+
+		switch nv := v1.(type) {
+		case LoopStruct:
+			r.PointerStack.Pop()
+
+			return nv.BreakIndex
+		default:
+			return p.Errf(r, "unsupport loop/range structure type: %#v", v1)
+		}
+
+		return ""
+
 	case 10410: // pln
 		list1T := []interface{}{}
 
@@ -3785,6 +4057,16 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 			// p.RunDeferUpToRoot()
 			return p.Errf(r, tk.GetErrStrX(v1))
 		}
+
+		return ""
+	case 20501: // sleep
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		v1 := tk.ToFloat(p.GetVarValue(r, instrT.Params[0]))
+
+		tk.Sleep(v1)
 
 		return ""
 
@@ -4698,6 +4980,8 @@ func QuickEval(strA string, p *QuixieVM, r *RunningContext) interface{} {
 				v2 := valueStackT.Pop()
 
 				vr := tk.GetLTResult(v2, v1)
+
+				// tk.Plo("<", v2, v1, vr)
 
 				if tk.IsErrX(vr) {
 					return fmt.Errorf("failed to cal the expression: %v", vr)

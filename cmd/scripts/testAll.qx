@@ -18,6 +18,26 @@ systemCmd $rs "qx" "-gopath" "if.qx"
 
 test $rs "if branch\nlabel3 else\n" $seq "if.qx"
 
+systemCmd $rs "qx" "-gopath" "for.qx"
+
+test $rs "0 : 10\n1 : 11\n2 : 12\n3 : 13\n4 : 14\nend\n" $seq "for.qx"
+
+systemCmd $rs "qx" "-gopath" "for2.qx"
+
+test $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n" $seq "for2.qx"
+
+systemCmd $rs "qx" "-gopath" "for3.qx"
+
+test $rs "i=0\ni=1\ni=2\ni=3\ni=4\nj=0\nj=0.5\nj=1\nj=1.5\nj=2\nj=2.5\nfor end\n" $seq "for3.qx"
+
+systemCmd $rs "qx" "-gopath" "for4.qx"
+
+test $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\nend\n" $seq "for4.qx"
+
+systemCmd $rs "qx" "-gopath" "for5.qx"
+
+test $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nend\n" $seq "for5.qx"
+
 systemCmd $rs "qx" "-gopath" "fastCall.qx"
 
 test $rs "124\n" $seq "fastCall.qx"
