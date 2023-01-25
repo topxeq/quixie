@@ -1,4 +1,7 @@
 // load code string from module file 1
+// getCurDir $rs1
+// joinPath $path1 $rs1 `scripts` `module1.qx`
+
 loadText $code1 `scripts/module1.qx`
 
 // print the code string for reference

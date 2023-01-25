@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -186,6 +187,16 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// file related
 	"loadText": 21101, // load text from file
+
+	// path related
+
+	"joinPath": 21902, // join file paths
+
+	"getCurDir": 21905, // get current working directory
+	"setCurDir": 21906, // set current working directory
+
+	"getAppDir":    21907, // get the application directory(where execute-file exists)
+	"getConfigDir": 21908, // get application config directory
 
 	// GUI related
 	"alert":    400001, // 类似JavaScript中的alert，弹出对话框，显示一个字符串或任意数字、对象的字符串表达
@@ -4132,6 +4143,95 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 			p.SetVar(r, pr, "")
 		}
 
+		return ""
+	case 21902: // joinPath
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		pr := instrT.Params[0]
+
+		rsT := filepath.Join(p.ParamsToStrs(r, instrT, 1)...)
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+
+	case 21905: // getCurDir
+
+		var pr any = -5
+
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		rsT := tk.GetCurrentDir()
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+
+	case 21906: // setCurDir
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var pr any = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		dirT := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		p.SetVar(r, pr, tk.SetCurrentDir(dirT))
+
+		return ""
+
+	case 21907: // getAppDir
+
+		var pr any = -5
+
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		rsT := tk.GetApplicationPath()
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+
+	case 21908: // getConfigDir
+
+		// pr := -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0]
+		v1p := 1
+		// }
+
+		vs := p.ParamsToStrs(r, instrT, v1p)
+
+		baseNameT := p.GetSwitchVarValue(r, vs, "-base=", "qx")
+
+		rsT, errT := tk.EnsureBasePath(baseNameT)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			return ""
+		}
+
+		p.SetVar(r, pr, rsT)
 		return ""
 
 	case 400001: // alert

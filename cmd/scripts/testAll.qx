@@ -64,7 +64,7 @@ test $rs "num1= 1.62\nnum2= 2.8\n4.536\nseal-function result: 4.536\n" $seq "sea
 
 systemCmd $rs "qx" "-gopath" "loadModule.qx"
 
-test $rs "code loaded:  \n :add1\r\n    pop $v2L\r\n    pop $v1L\r\n\r\n    add $push $v1L $v2L\r\n\r\n    fastRet\r\n\r\n:sub1\r\n    pop $v2L\r\n    pop $v1L\r\n\r\n    sub $push $v1L $v2L\r\n    \r\n    fastRet \n\n(int)23\n(int)18\n(int)1782\n" $seq "loadModule.qx"
+test $rs "code loaded:  \n :add1\n    pop $v2L\n    pop $v1L\n\n    add $push $v1L $v2L\n\n    fastRet\n\n:sub1\n    pop $v2L\n    pop $v1L\n\n    sub $push $v1L $v2L\n    \n    fastRet \n\n(int)23\n(int)18\n(int)1782\n" $seq "loadModule.qx"
 
 systemCmd $rs "qx" "-gopath" "onError.qx"
 
