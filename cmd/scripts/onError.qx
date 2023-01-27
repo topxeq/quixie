@@ -19,14 +19,11 @@ exit
 
 // error handler
 :handler1
-    // pop the last line of code, error message and detail information by order
-    // error handler should ensure pop out 3 values
-    pop $lastLine
-    pop $errMsg
-    pop $detailG
+    // the error info will in 3 global variables: $lastLineG, $errorMessageG, $errorDetailG
+    // error handler can handle them
 
     // output the message
-    pl "error occurred while running to line %v: %v, detail: %v" $lastLine $errMsg $detailG
+    pl "error occurred while running to line %v: %v, detail: %v" $lastLineG $errorMessageG $errorDetailG
 
     // jump to the specific position(label)
     goto :next1

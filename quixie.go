@@ -78,8 +78,11 @@ var InstrNameSet map[string]int = map[string]int{
 	"=":      401,
 
 	// if/else, switch related
-	"if":    610, // 判断第一个参数（布尔类型，如果省略则表示取弹栈值）如果是true，则跳转到指定标号处
-	"ifNot": 611,
+	"if":    610, // usage: if $boolValue1 :labelForTrue :labelForElse
+	"ifNot": 611, // usage: if @`$a1 == #i3` :+1 :+2
+
+	"ifErr":  651, // if error or TXERROR string then ... else ...
+	"ifErrX": 651,
 
 	// compare related
 	"==": 701, // 判断两个数值是否相等，无参数时，比较两个弹栈值，结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
@@ -155,6 +158,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"fastRet": 1071, // return from fast function, used with fastCall
 
 	"for": 1080, // for loop, usage: for @`$a < #i10` `++ $a` :cont1 :+1 , if the quick eval result is true(bool value), goto label :cont1, otherwise goto :+1(the next line/instr), the same as in C/C++ "for (; a < 10; a++) {...}"
+
+	"range": 1085, // usage: range 5 :+1 :breakRange1, range #J`[{"a":1,"b":2},{"c":3,"d":4}]` :range1 :+1
+
+	"getIter": 1087, // get i, v or k, v in range
 
 	// array/slice related 数组/切片相关
 
@@ -516,6 +523,26 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				}
 
 				return VarRef{-3, rsT}
+			} else if typeT == 'J' { // value from JSON
+				var objT interface{}
+
+				s1DT := s1T[2:] // tk.UrlDecode(s1T[2:])
+
+				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
+					s1DT = s1DT[1 : len(s1DT)-1]
+				}
+
+				// tk.Plv(s1T[2:])
+				// tk.Plv(s1DT)
+
+				errT := json.Unmarshal([]byte(s1DT), &objT)
+				// tk.Plv(errT)
+				if errT != nil {
+					return VarRef{-3, s1T}
+				}
+
+				// tk.Plv(listT)
+				return VarRef{-3, objT}
 			} else if typeT == 'L' { // list/array
 				var listT []interface{}
 
@@ -1818,6 +1845,12 @@ func (p *QuixieVM) ParamsToList(runA *RunningContext, v *Instr, fromA int) []int
 	return sl
 }
 
+type RangeStruct struct {
+	Iterator   tk.Iterator
+	LoopIndex  int
+	BreakIndex int
+}
+
 type LoopStruct struct {
 	Cond       interface{}
 	LoopIndex  int
@@ -1944,10 +1977,13 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 		if r1 := recover(); r1 != nil {
 			// tk.Printfln("exception: %v", r)
 			if r.ErrorHandler > -1 {
+				p.SetVarGlobal("lastLineG", r.CodeSourceMap[r.CodePointer]+1)
+				p.SetVarGlobal("errorMessageG", tk.ToStr(r))
+				p.SetVarGlobal("errorDetailG", p.Errf(r, "runtime error: %v\n%v", r, string(debug.Stack())))
 
-				p.Stack.Push(p.Errf(r, "runtime error: %v\n%v", r, string(debug.Stack())))
-				p.Stack.Push(tk.ToStr(r))
-				p.Stack.Push(r.CodeSourceMap[r.CodePointer] + 1)
+				// p.Stack.Push(p.Errf(r, "runtime error: %v\n%v", r, string(debug.Stack())))
+				// p.Stack.Push(tk.ToStr(r))
+				// p.Stack.Push(r.CodeSourceMap[r.CodePointer] + 1)
 				resultR = r.ErrorHandler
 				return
 			}
@@ -2877,6 +2913,56 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		return ""
 
+	case 651: // ifErr/IfErrX
+		// tk.Plv(instrT)
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		var condT bool
+		var v2 interface{}
+		var v2o interface{}
+
+		var elseLabelIntT int = -1
+
+		if instrT.ParamLen > 2 {
+			elseLabelT := r.GetLabelIndex(p.GetVarValue(r, instrT.Params[2]))
+
+			if elseLabelT < 0 {
+				return p.Errf(r, "invalid label: %v", elseLabelT)
+			}
+
+			elseLabelIntT = elseLabelT
+		}
+
+		v2o = instrT.Params[1]
+
+		v2 = p.GetVarValue(r, instrT.Params[1])
+
+		// tk.Plv(instrT)
+		tmpv := p.GetVarValue(r, instrT.Params[0])
+		if GlobalsG.VerboseLevel > 1 {
+			tk.Pl("if %v -> %v", instrT.Params[0], tmpv)
+		}
+
+		condT = tk.IsErrX(tmpv)
+
+		if condT {
+			c2 := r.GetLabelIndex(v2)
+
+			if c2 < 0 {
+				return p.Errf(r, "invalid label: %v", v2o)
+			}
+
+			return c2
+		}
+
+		if elseLabelIntT >= 0 {
+			return elseLabelIntT
+		}
+
+		return ""
+
 	// s2, sok := v2.(string)
 
 	// if !sok {
@@ -3748,6 +3834,82 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		return ""
 
+	case 1085: // range
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[0])
+
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		var v3 interface{} = ":+1"
+		if instrT.ParamLen > 2 {
+			v3 = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		vs := p.ParamsToList(r, instrT, 3)
+
+		label1 := r.GetLabelIndex(v2)
+
+		if label1 < 0 {
+			return p.Errf(r, "failed to get continue index: %v", v2)
+		}
+
+		label2 := r.GetLabelIndex(v3)
+
+		if label2 < 0 {
+			return p.Errf(r, "failed to get break index: %v", v3)
+		}
+
+		iteratorT := tk.NewCompactIterator(v1, vs...)
+
+		if iteratorT == nil {
+			return p.Errf(r, "failed to create iterator: %v(%V)", v1, instrT.Params[0])
+		}
+		// tk.Plv(iteratorT)
+
+		if !iteratorT.HasNext() {
+			return label2
+		}
+
+		r.PointerStack.Push(RangeStruct{Iterator: iteratorT, LoopIndex: label1, BreakIndex: label2})
+
+		return label1
+	case 1087: // getIter
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters")
+		}
+
+		pr1 := instrT.Params[0]
+		pr2 := instrT.Params[1]
+
+		objT := r.PointerStack.Peek()
+
+		rangerT, ok := objT.(RangeStruct)
+
+		if !ok {
+			p.SetVar(r, pr1, fmt.Errorf("not a range struct: %T(%#v)", objT, objT))
+			p.SetVar(r, pr2, tk.Undefined)
+
+			return ""
+		}
+
+		countT, kiT, valueT, b1 := rangerT.Iterator.Next()
+
+		p.SetVar(r, pr1, kiT)
+		p.SetVar(r, pr2, valueT)
+
+		if instrT.ParamLen > 2 {
+			p.SetVar(r, instrT.Params[2], countT)
+		}
+
+		if instrT.ParamLen > 3 {
+			p.SetVar(r, instrT.Params[3], b1)
+		}
+
+		return ""
+
 	case 1123: // getArrayItem/[]
 		if instrT.ParamLen < 3 {
 			return p.Errf(r, "not enough parameters")
@@ -3927,6 +4089,16 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 				return nv.BreakIndex
 			}
+		case RangeStruct:
+			rsbT := nv.Iterator.HasNext()
+
+			if rsbT {
+				return nv.LoopIndex
+			} else {
+				r.PointerStack.Pop()
+
+				return nv.BreakIndex
+			}
 		default:
 			return p.Errf(r, "unsupport loop/range structure type: %#v", v1)
 		}
@@ -3952,6 +4124,10 @@ func RunInstr(p *QuixieVM, r *RunningContext, instrA *Instr) (resultR interface{
 
 		switch nv := v1.(type) {
 		case LoopStruct:
+			r.PointerStack.Pop()
+
+			return nv.BreakIndex
+		case RangeStruct:
 			r.PointerStack.Pop()
 
 			return nv.BreakIndex
@@ -4288,9 +4464,12 @@ func (p *QuixieVM) Run(posA ...int) interface{} {
 		} else {
 			if tk.IsError(resultT) {
 				if p.Running.ErrorHandler > -1 {
-					p.Stack.Push(tk.GetErrStrX(resultT))
-					p.Stack.Push("runtime error")
-					p.Stack.Push(p.Running.CodeSourceMap[p.Running.CodePointer] + 1)
+					p.SetVarGlobal("lastLineG", p.Running.CodeSourceMap[p.Running.CodePointer]+1)
+					p.SetVarGlobal("errorMessageG", "runtime error")
+					p.SetVarGlobal("errorDetailG", tk.GetErrStrX(resultT))
+					// p.Stack.Push(tk.GetErrStrX(resultT))
+					// p.Stack.Push("runtime error")
+					// p.Stack.Push(p.Running.CodeSourceMap[p.Running.CodePointer] + 1)
 
 					p.Running.CodePointer = p.Running.ErrorHandler
 

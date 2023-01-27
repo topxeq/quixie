@@ -265,29 +265,101 @@ func doWork() {
 }
 
 func test() {
-	// fontPaths := findfont.List()
-	// for _, path := range fontPaths {
-	// 	// fmt.Println(path)
-	// 	//楷体:simkai.ttf
-	// 	//黑体:simhei.ttf
-	// 	if strings.Contains(path, "simhei.ttf") {
-	// 		os.Setenv("FYNE_FONT", path)
-	// 		break
-	// 	}
-	// }
+	iter := tk.NewCompactIterator(10, 5, 10, 2, 0)
 
-	// a := app.New()
-	// w := a.NewWindow("Hello今天")
+	for {
+		_, ki, item, ok := iter.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(ki, item)
+	}
 
-	// hello := widget.NewLabel("Hello Fyne我们!")
-	// w.SetContent(container.NewVBox(
-	// 	hello,
-	// 	widget.NewButton("Hi!", func() {
-	// 		hello.SetText("Welcome大家 :)")
-	// 	}),
-	// ))
+	iter0 := tk.NewCompactIterator(5)
 
-	// w.ShowAndRun()
+	for {
+		_, ki, item, ok := iter0.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(ki, item)
+	}
+
+	iter1 := tk.NewCompactIterator(5.0, 5, 10, 2.3, 0)
+
+	for {
+		_, ki, item, ok := iter1.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(ki, item)
+	}
+
+	iter2 := tk.NewCompactIterator("abc123", 0, -1, 1, 0)
+
+	for {
+		_, k, item, ok := iter2.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
+	iter3 := tk.NewCompactIterator("abc123", -1, 0, -1, 3)
+
+	for {
+		_, k, item, ok := iter3.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
+	iter4 := tk.NewCompactIterator([]map[string]string{map[string]string{"a": "avalue", "b": "bvalue", "c": "cvalue"}, map[string]string{"1": "1v", "2": "2v", "3": "3v"}}, 0, -1, 1, 0)
+
+	for {
+		_, k, item, ok := iter4.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
+	iter5 := tk.NewCompactIterator(map[string]string{"a": "avalue", "b": "bvalue", "c": "cvalue"}, 0, -1, 1, 0)
+
+	for {
+		_, k, item, ok := iter5.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
+	iter6 := tk.NewCompactIterator([]bool{false, true, true, false, true})
+
+	for {
+		_, k, item, ok := iter6.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
+	iter7 := tk.NewCompactIterator(map[string]byte{"a": byte(1), "b": byte(2)})
+
+	if iter7 == nil {
+		tk.Pl("failed to create iterator")
+		return
+	}
+
+	for {
+		_, k, item, ok := iter7.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
 }
 
 func runInteractiveShell() int {
